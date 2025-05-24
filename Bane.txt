@@ -1,0 +1,12 @@
+Deleted the mistral env.
+#Dashboard server
+npm install / npm run dev : dashboard in dev mode
+npm install / npm run build / npm start : dashboard in prod mode.
+
+#Enviroment creation : 
+py -3.10 -m venv mistral-env
+.\mistral-env\Scripts\activate
+
+#Ai server
+pip install fastapi llama_cpp
+uvicorn backend:app --reload
