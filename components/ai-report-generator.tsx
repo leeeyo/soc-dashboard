@@ -9,32 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Slider } from "@/components/ui/slider"
-import { Loader2, Sparkles, AlertTriangle, Save } from "lucide-react"
-import { generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
-import { availableModels, generateTextWithLocalModel, getModelParameters, reportTemplates } from "@/services/ai-service"
+import { Loader2, Sparkles, AlertTriangle, FileText, MessageSquare } from "lucide-react"
+import { generateTextWithLocalModel, getModelParameters, reportTemplates } from "@/services/ai-service"
 import { useToast } from "@/hooks/use-toast"
+import { Switch } from "@/components/ui/switch"
+import jsPDF from 'jspdf'
 
 export function AIReportGenerator() {
   const [loading, setLoading] = useState(false)
   const [reportType, setReportType] = useState("incident")
-  const [selectedModel, setSelectedModel] = useState("local-mistral")
   const [reportOutput, setReportOutput] = useState("")
   const [additionalContext, setAdditionalContext] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const [temperature, setTemperature] = useState(0.7)
-  const [maxTokens, setMaxTokens] = useState(128) // Reduced default max tokens
+  const [maxTokens, setMaxTokens] = useState(128)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [useCustomPrompt, setUseCustomPrompt] = useState(false)
+  const [customPrompt, setCustomPrompt] = useState("")
+  const MAX_PROMPT_LENGTH = 1000
   const { toast } = useToast()
-
-  // Update model parameters when model changes
-  const handleModelChange = (modelId: string) => {
-    setSelectedModel(modelId)
-    const params = getModelParameters(modelId)
-    setMaxTokens(params.maxTokens)
-    setTemperature(params.temperature)
-  }
 
   const handleGenerateReport = async () => {
     setLoading(true)
@@ -43,47 +37,42 @@ export function AIReportGenerator() {
     setDebugInfo(null)
 
     try {
-      // Get the prompt template based on report type
-      const template = reportTemplates[reportType as keyof typeof reportTemplates]
-      const prompt = template.prompt(additionalContext)
+      let prompt = ""
+      if (useCustomPrompt) {
+        prompt = customPrompt
+      } else {
+        // Get the prompt template based on report type
+        const template = reportTemplates[reportType as keyof typeof reportTemplates]
+        prompt = template.prompt(additionalContext)
+      }
 
-      const selectedModelObj = availableModels.find((m) => m.id === selectedModel)
+      // Hardcode to use local-mistral
+      const selectedModelId = "local-mistral"
+      const selectedModelObj = { id: "local-mistral", name: "Mistral 7B (Local)", type: "local", endpoint: "...", description: "..." }
+      
       setDebugInfo(`Using model: ${selectedModelObj?.name}, type: ${selectedModelObj?.type}
 Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
 
       let text = ""
 
-      if (selectedModelObj?.type === "local") {
-        // Use local model
-        toast({
-          title: "Generating report",
-          description: "Using local Mistral model...",
-        })
+      // Only use local model generation
+      toast({
+        title: "Generating report",
+        description: "Using local Mistral model...",
+      })
 
-        setDebugInfo((prev) => `${prev}\nSending request to: ${selectedModelObj.endpoint}`)
+      setDebugInfo((prev) => `${prev}\nSending request to local model...`)
 
-        try {
-          const result = await generateTextWithLocalModel(selectedModel, prompt, {
-            temperature,
-            maxTokens,
-          })
-          text = result.text
-          setDebugInfo((prev) => `${prev}\nReceived response of length: ${text.length}`)
-        } catch (err: any) {
-          setDebugInfo((prev) => `${prev}\nError: ${err.message || "Unknown error"}`)
-          throw err
-        }
-      } else {
-        // Use OpenAI model
-        const result = await generateText({
-          model: openai(selectedModel),
-          prompt,
+      try {
+        const result = await generateTextWithLocalModel(selectedModelId, prompt, {
           temperature,
           maxTokens,
-          system:
-            "You are a cybersecurity expert specializing in threat intelligence and incident reporting. Generate detailed, professional security reports.",
         })
         text = result.text
+        setDebugInfo((prev) => `${prev}\nReceived response of length: ${text.length}`)
+      } catch (err: any) {
+        setDebugInfo((prev) => `${prev}\nError: ${err.message || "Unknown error"}`)
+        throw err
       }
 
       setReportOutput(text)
@@ -92,8 +81,8 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
       const reportHistory = JSON.parse(localStorage.getItem("report_history") || "[]")
       reportHistory.unshift({
         id: `RPT-${Date.now()}`,
-        title: `${template.title}: ${new Date().toLocaleDateString()}`,
-        type: reportType,
+        title: useCustomPrompt ? "Custom Prompt Report" : `${reportType} Report`,
+        type: useCustomPrompt ? "custom" : reportType,
         generated: new Date().toISOString(),
         content: text,
       })
@@ -116,53 +105,7 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
     }
   }
 
-  // For testing - generate a very simple prompt
-  const handleSimpleTest = async () => {
-    setLoading(true)
-    setReportOutput("")
-    setError(null)
-    setDebugInfo("Running simple test with minimal prompt...")
-
-    try {
-      const selectedModelObj = availableModels.find((m) => m.id === selectedModel)
-
-      if (selectedModelObj?.type === "local") {
-        const result = await generateTextWithLocalModel(
-          selectedModel,
-          "Write a one-sentence description of cybersecurity.",
-          {
-            temperature: 0.7,
-            maxTokens: 64, // Very small token count for quick response
-          },
-        )
-
-        setReportOutput(result.text)
-        setDebugInfo((prev) => `${prev}\nTest completed successfully with response length: ${result.text.length}`)
-
-        toast({
-          title: "Test completed",
-          description: "Simple test completed successfully",
-        })
-      } else {
-        // Use OpenAI model for test
-        const result = await generateText({
-          model: openai(selectedModel),
-          prompt: "Write a one-sentence description of cybersecurity.",
-          temperature: 0.7,
-          maxTokens: 64,
-        })
-        setReportOutput(result.text)
-      }
-    } catch (error: any) {
-      console.error("Error in simple test:", error)
-      setError(error.message || "Unknown error in simple test")
-      setDebugInfo((prev) => `${prev}\nTest failed: ${error.message || "Unknown error"}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const saveReport = () => {
+  const saveReportAsTxt = () => {
     if (!reportOutput) return
 
     const blob = new Blob([reportOutput], { type: "text/plain" })
@@ -175,8 +118,59 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
 
     toast({
       title: "Report saved",
-      description: "Your report has been saved to your device",
+      description: "Your report has been saved to your device as TXT",
     })
+  }
+
+  const saveReportAsPdf = () => {
+    if (!reportOutput) return
+
+    try {
+      // Create new PDF document
+      const doc = new jsPDF()
+      
+      // Set font styles
+      doc.setFont("helvetica", "normal")
+      doc.setFontSize(16)
+      
+      // Add title
+      const title = useCustomPrompt ? "Custom Prompt Report" : `${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`
+      doc.text(title, 20, 20)
+      
+      // Add generation date
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 30)
+      
+      // Add separator line
+      doc.setDrawColor(200)
+      doc.line(20, 35, 190, 35)
+      
+      // Add report content
+      doc.setFontSize(12)
+      doc.setTextColor(0)
+      
+      // Split text into lines that fit the page width
+      const splitText = doc.splitTextToSize(reportOutput, 170)
+      
+      // Add text with proper spacing
+      doc.text(splitText, 20, 45)
+      
+      // Save the PDF
+      doc.save(`soc-report-${reportType}-${new Date().toISOString().split('T')[0]}.pdf`)
+
+      toast({
+        title: "PDF saved",
+        description: "Your report has been saved as a PDF file",
+      })
+    } catch (error) {
+      console.error("Error generating PDF:", error)
+      toast({
+        title: "Error saving PDF",
+        description: "There was an error generating the PDF file",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -190,66 +184,83 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
           </Alert>
         )}
 
-        {debugInfo && (
-          <Alert>
-            <AlertTitle>Debug Information</AlertTitle>
-            <AlertDescription className="whitespace-pre-wrap font-mono text-xs">{debugInfo}</AlertDescription>
-          </Alert>
+        <div className="flex items-center justify-between space-x-2">
+          <Label htmlFor="custom-prompt">Use Custom Prompt</Label>
+          <Switch
+            id="custom-prompt"
+            checked={useCustomPrompt}
+            onCheckedChange={setUseCustomPrompt}
+          />
+        </div>
+
+        {!useCustomPrompt ? (
+          <>
+            <div className="space-y-2">
+              <Label>Report Type</Label>
+              <RadioGroup value={reportType} onValueChange={setReportType} className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="incident" id="incident" />
+                  <Label htmlFor="incident">Incident Report</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="threat" id="threat" />
+                  <Label htmlFor="threat">Threat Intelligence Report</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="summary" id="summary" />
+                  <Label htmlFor="summary">Executive Summary</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Time Period</Label>
+              <Select defaultValue="24h">
+                <SelectTrigger>
+                  <SelectValue placeholder="Select time period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="24h">Last 24 Hours</SelectItem>
+                  <SelectItem value="7d">Last 7 Days</SelectItem>
+                  <SelectItem value="30d">Last 30 Days</SelectItem>
+                  <SelectItem value="custom">Custom Range</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Additional Context (Optional)</Label>
+              <Textarea
+                placeholder="Add any specific details or context for the AI to consider..."
+                className="min-h-[100px]"
+                value={additionalContext}
+                onChange={(e) => setAdditionalContext(e.target.value)}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Custom Prompt</Label>
+              <span className="text-sm text-muted-foreground">
+                {customPrompt.length}/{MAX_PROMPT_LENGTH} characters
+              </span>
+            </div>
+            <Textarea
+              placeholder="Enter your custom prompt here..."
+              className="min-h-[200px] font-mono"
+              value={customPrompt}
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_PROMPT_LENGTH) {
+                  setCustomPrompt(e.target.value)
+                }
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Write a detailed prompt for the AI to generate your report. Be specific about what you want to include.
+            </p>
+          </div>
         )}
-
-        <div className="space-y-2">
-          <Label>AI Model</Label>
-          <Select value={selectedModel} onValueChange={handleModelChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select AI model" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.map((model) => (
-                <SelectItem key={model.id} value={model.id}>
-                  <div className="flex flex-col">
-                    <span>{model.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {model.type === "local" ? "🖥️ Local" : "☁️ Cloud"} - {model.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Report Type</Label>
-          <RadioGroup value={reportType} onValueChange={setReportType} className="flex flex-col space-y-1">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="incident" id="incident" />
-              <Label htmlFor="incident">Incident Report</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="threat" id="threat" />
-              <Label htmlFor="threat">Threat Intelligence Report</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="summary" id="summary" />
-              <Label htmlFor="summary">Executive Summary</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Time Period</Label>
-          <Select defaultValue="24h">
-            <SelectTrigger>
-              <SelectValue placeholder="Select time period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Last 24 Hours</SelectItem>
-              <SelectItem value="7d">Last 7 Days</SelectItem>
-              <SelectItem value="30d">Last 30 Days</SelectItem>
-              <SelectItem value="custom">Custom Range</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -302,16 +313,6 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label>Additional Context (Optional)</Label>
-          <Textarea
-            placeholder="Add any specific details or context for the AI to consider..."
-            className="min-h-[100px]"
-            value={additionalContext}
-            onChange={(e) => setAdditionalContext(e.target.value)}
-          />
-        </div>
-
         <div className="flex gap-2">
           <Button onClick={handleGenerateReport} disabled={loading} className="flex-1">
             {loading ? (
@@ -325,10 +326,6 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
                 Generate AI Report
               </>
             )}
-          </Button>
-
-          <Button onClick={handleSimpleTest} variant="outline" disabled={loading}>
-            Simple Test
           </Button>
         </div>
       </div>
@@ -351,9 +348,13 @@ Parameters: temperature=${temperature}, max_tokens=${maxTokens}`)
               >
                 Copy
               </Button>
-              <Button variant="outline" size="sm" onClick={saveReport}>
-                <Save className="mr-2 h-3 w-3" />
-                Save
+              <Button variant="outline" size="sm" onClick={saveReportAsTxt}>
+                <FileText className="mr-2 h-3 w-3" />
+                Save as TXT
+              </Button>
+              <Button variant="outline" size="sm" onClick={saveReportAsPdf}>
+                <FileText className="mr-2 h-3 w-3" />
+                Save as PDF
               </Button>
             </div>
           )}

@@ -10,8 +10,8 @@ export function ThreatStats() {
           <AlertTriangle className="h-4 w-4 text-amber-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">24</div>
-          <p className="text-xs text-muted-foreground">+5 since yesterday</p>
+          <div className="text-2xl font-bold">5</div>
+          <p className="text-xs text-muted-foreground">+ 1 since yesterday</p>
         </CardContent>
       </Card>
       <Card>
@@ -20,8 +20,8 @@ export function ThreatStats() {
           <Zap className="h-4 w-4 text-red-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">142</div>
-          <p className="text-xs text-muted-foreground">+12 in the last 24h</p>
+          <div className="text-2xl font-bold">14</div>
+          <p className="text-xs text-muted-foreground">+3 in the last 24h</p>
         </CardContent>
       </Card>
       <Card>
@@ -30,7 +30,7 @@ export function ThreatStats() {
           <Shield className="h-4 w-4 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">18</div>
+          <div className="text-2xl font-bold">10</div>
           <p className="text-xs text-muted-foreground">+3 since yesterday</p>
         </CardContent>
       </Card>
@@ -41,7 +41,7 @@ export function ThreatStats() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">7</div>
-          <p className="text-xs text-muted-foreground">Last report 2h ago</p>
+          <p className="text-xs text-muted-foreground">Last report 3h ago</p>
         </CardContent>
       </Card>
     </>

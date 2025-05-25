@@ -44,7 +44,7 @@ export function DashboardSidebar() {
       <SidebarHeader className="flex items-center justify-between">
         <div className="flex items-center gap-2 px-2">
           <Shield className="h-6 w-6 text-primary" />
-          <h1 className="text-lg font-bold">SOC Dashboard</h1>
+          <h1 className="text-lg font-bold">CTI Portal</h1>
         </div>
         <SidebarTrigger />
       </SidebarHeader>
@@ -95,26 +95,10 @@ export function DashboardSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/reports/manual")}>
-                  <a href="/reports/manual">
-                    <FileText />
-                    <span>Manual Reports</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/reports/ai-generated")}>
                   <a href="/reports/ai-generated">
                     <Terminal />
                     <span>AI-Generated Reports</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/reports/scheduled")}>
-                  <a href="/reports/scheduled">
-                    <Activity />
-                    <span>Scheduled Reports</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -58,8 +58,7 @@ export function DetectionMetrics() {
           <ShieldAlert className="h-4 w-4 text-purple-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">87</div>
-          <p className="text-xs text-muted-foreground mt-2">+12 from last month</p>
+          <div className="text-2xl font-bold">10</div>
         </CardContent>
       </Card>
 

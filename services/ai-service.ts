@@ -10,18 +10,6 @@ export interface AIModel {
 // Available AI models
 export const availableModels: AIModel[] = [
   {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    type: "remote",
-    description: "OpenAI's most advanced model for general-purpose tasks",
-  },
-  {
-    id: "gpt-3.5-turbo",
-    name: "GPT-3.5 Turbo",
-    type: "remote",
-    description: "Efficient model for most tasks with good performance",
-  },
-  {
     id: "local-mistral",
     name: "Local Mistral 7B",
     type: "local",
@@ -57,7 +45,7 @@ export async function generateTextWithLocalModel(
       },
       body: JSON.stringify({
         prompt,
-        max_tokens: options?.maxTokens || 128, // Reduced token limit for faster response
+        max_tokens: options?.maxTokens || 512, // Reduced token limit for faster response
         temperature: options?.temperature || 0.7,
       }),
     })
@@ -129,8 +117,8 @@ export function getModelParameters(modelId: string) {
 
   if (model.type === "local") {
     return {
-      maxTokens: 64, // Default for local models - reduced for faster response
-      temperature: 0.1,
+      maxTokens: 512, // Default for local models - reduced for faster response
+      temperature: 0.7,
     }
   } else {
     // Cloud models can handle more tokens

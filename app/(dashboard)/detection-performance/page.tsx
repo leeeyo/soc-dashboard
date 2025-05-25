@@ -12,18 +12,6 @@ export default function DetectionPerformancePage() {
       <DashboardHeader
         title="Threat Detection Performance"
         description="Monitor detection effectiveness and false positive rates"
-        actions={
-          <>
-            <Button variant="outline" size="sm">
-              <Calendar className="mr-2 h-4 w-4" />
-              Date Range
-            </Button>
-            <Button variant="default" size="sm">
-              <Download className="mr-2 h-4 w-4" />
-              Export Data
-            </Button>
-          </>
-        }
       />
       <div className="grid gap-4 p-4 md:grid-cols-2">
         <Card className="col-span-full">
